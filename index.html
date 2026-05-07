@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sieber &</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --grid: 38px;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      background: #1a1a1a;
+      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      color: #fff;
+      cursor: none;
+      overflow-x: hidden;
+    }
+
+    /* ── Diamond cursor ── */
+    #cursor {
+      position: fixed;
+      width: 10px;
+      height: 10px;
+      background: white;
+      transform: rotate(45deg) translate(-50%, -50%);
+      pointer-events: none;
+      z-index: 9999;
+      top: 0;
+      left: 0;
+    }
+
+    /* ── Canvas for the trail ── */
+    #trail-canvas {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 100;
+    }
+
+    /* ── Hero ── */
+    .hero {
+      position: relative;
+      width: 100%;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    .hero-bg {
+      position: absolute;
+      inset: 0;
+      background: url('untitled_Gemini 3 (Nano Banana Pro)_2026-04-17_13-45-56 Kopie.png') center center / cover no-repeat;
+      z-index: 0;
+    }
+
+    /* Dark overlay to match the moody screenshot tone */
+    .hero-bg::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: rgba(10, 10, 14, 0.38);
+    }
+
+    /* CSS Grid overlay */
+    .grid-overlay {
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.10) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.10) 1px, transparent 1px);
+      background-size: var(--grid) var(--grid);
+      pointer-events: none;
+    }
+
+    /* ── Nav ── */
+    nav {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 36px 48px;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 18px;
+      font-weight: 300;
+      letter-spacing: 0.02em;
+      color: #fff;
+      text-decoration: none;
+    }
+
+    .logo img {
+      height: auto;
+      width: 180px;
+      object-fit: contain;
+      object-position: left center;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 40px;
+      list-style: none;
+    }
+
+    .nav-links a {
+      color: rgba(255,255,255,0.85);
+      text-decoration: none;
+      font-size: 15px;
+      font-weight: 300;
+      letter-spacing: 0.04em;
+      transition: color 0.2s;
+    }
+
+    .nav-links a:hover {
+      color: #fff;
+    }
+
+    /* ── Hero headline ── */
+    .hero-headline {
+      position: absolute;
+      bottom: 72px;
+      left: 48px;
+      z-index: 10;
+      max-width: 720px;
+    }
+
+    .hero-headline h1 {
+      font-size: clamp(56px, 5.6vw, 82px);
+      font-weight: 700;
+      line-height: 1.05;
+      letter-spacing: -0.025em;
+      color: #fff;
+    }
+
+    /* ── Sections below hero ── */
+    section {
+      position: relative;
+      padding: 120px 40px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .section-label {
+      font-size: 11px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.4);
+      margin-bottom: 48px;
+    }
+
+    .section-title {
+      font-size: clamp(32px, 4vw, 56px);
+      font-weight: 700;
+      line-height: 1.1;
+      letter-spacing: -0.02em;
+      margin-bottom: 32px;
+      color: #fff;
+    }
+
+    .section-body {
+      font-size: 17px;
+      font-weight: 300;
+      line-height: 1.7;
+      color: rgba(255,255,255,0.6);
+      max-width: 560px;
+    }
+
+    .divider {
+      border: none;
+      border-top: 1px solid rgba(255,255,255,0.1);
+      margin: 0 40px;
+    }
+
+    /* ── Team grid ── */
+    .team-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 40px;
+      margin-top: 48px;
+    }
+
+    .team-card {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .team-card-img {
+      aspect-ratio: 3/4;
+      background: rgba(255,255,255,0.06);
+      border-radius: 2px;
+    }
+
+    .team-card-name {
+      font-size: 16px;
+      font-weight: 500;
+      color: #fff;
+    }
+
+    .team-card-role {
+      font-size: 13px;
+      font-weight: 300;
+      color: rgba(255,255,255,0.45);
+      letter-spacing: 0.04em;
+    }
+
+    /* ── Contact ── */
+    .contact-link {
+      display: inline-block;
+      margin-top: 32px;
+      font-size: 15px;
+      font-weight: 400;
+      color: #fff;
+      text-decoration: none;
+      border-bottom: 1px solid rgba(255,255,255,0.4);
+      padding-bottom: 4px;
+      letter-spacing: 0.04em;
+      transition: border-color 0.2s;
+    }
+
+    .contact-link:hover {
+      border-color: #fff;
+    }
+
+    /* ── Approach section ── */
+    .approach-section {
+      position: relative;
+      width: 100%;
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .approach-bg {
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 90% 65% at 8% 115%,  rgba(228, 75, 45, 0.88) 0%, transparent 52%),
+        radial-gradient(ellipse 65% 55% at 85% 112%, rgba(232, 80, 50, 0.72) 0%, transparent 50%),
+        radial-gradient(ellipse 55% 40% at 50% 88%,  rgba(238, 100, 65, 0.40) 0%, transparent 48%),
+        #cbd0de;
+    }
+
+    .approach-spacer { flex: 1; }
+
+    .approach-inner {
+      position: relative;
+      z-index: 2;
+      padding: 0 80px 80px;
+    }
+
+    .approach-timeline {
+      position: relative;
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      margin-bottom: 56px;
+    }
+
+    .approach-timeline::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: calc(100% / 6);
+      right: calc(100% / 6);
+      height: 1px;
+      background: rgba(255, 255, 255, 0.55);
+      transform: translateY(-50%);
+      z-index: 0;
+    }
+
+    .timeline-diamond-wrap {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      position: relative;
+      z-index: 1;
+    }
+
+    .timeline-diamond-shape {
+      width: 34px;
+      height: 34px;
+      background: #fff;
+      transform: rotate(45deg);
+    }
+
+    .approach-columns {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 48px;
+    }
+
+    .approach-col-header {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .approach-num {
+      font-size: 13px;
+      font-weight: 300;
+      color: rgba(255, 255, 255, 0.65);
+      letter-spacing: 0.06em;
+      flex-shrink: 0;
+    }
+
+    .approach-title {
+      font-size: clamp(38px, 4.5vw, 68px);
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: -0.025em;
+      line-height: 1.0;
+    }
+
+    .approach-body {
+      font-size: 13px;
+      font-weight: 300;
+      line-height: 1.65;
+      color: rgba(255, 255, 255, 0.72);
+    }
+
+    /* ── Footer ── */
+    footer {
+      padding: 40px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-top: 1px solid rgba(255,255,255,0.08);
+      font-size: 13px;
+      font-weight: 300;
+      color: rgba(255,255,255,0.3);
+      letter-spacing: 0.04em;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="cursor"></div>
+  <canvas id="trail-canvas"></canvas>
+
+  <!-- ── Hero ── -->
+  <div class="hero" id="hero">
+    <div class="hero-bg"></div>
+    <div class="grid-overlay"></div>
+
+    <nav>
+      <a class="logo" href="#">
+        <img src="Unbenannt-1 Kopie.png" alt="Sieber &">
+      </a>
+      <ul class="nav-links">
+        <li><a href="#about">about us</a></li>
+        <li><a href="#team">team</a></li>
+        <li><a href="#contact">contact</a></li>
+      </ul>
+    </nav>
+
+    <div class="hero-headline">
+      <h1>Where Strategy and People Meet.</h1>
+    </div>
+  </div>
+
+  <!-- ── Approach ── -->
+  <div class="approach-section">
+    <div class="approach-bg"></div>
+    <div class="approach-spacer"></div>
+    <div class="approach-inner">
+      <div class="approach-timeline">
+        <div class="timeline-diamond-wrap"><div class="timeline-diamond-shape"></div></div>
+        <div class="timeline-diamond-wrap"><div class="timeline-diamond-shape"></div></div>
+        <div class="timeline-diamond-wrap"><div class="timeline-diamond-shape"></div></div>
+      </div>
+      <div class="approach-columns">
+        <div class="approach-col">
+          <div class="approach-col-header">
+            <span class="approach-num">01</span>
+            <h3 class="approach-title">Identify</h3>
+          </div>
+          <p class="approach-body">Die Phase des Entdeckens. Wo stehen wir? Was bewegt sich? Was übersehen andere? sieber& stellt die richtigen Fragen bevor sie Antworten liefern. Hypothesenbasiert, ohne vorgefasste Lösung.</p>
+        </div>
+        <div class="approach-col">
+          <div class="approach-col-header">
+            <span class="approach-num">02</span>
+            <h3 class="approach-title">Innovate</h3>
+          </div>
+          <p class="approach-body">Die Phase des Denkens. Was ist möglich? Wie sieht die beste Version aus? Neue Geschäftsmodelle, neue Strategien, neue Wege — entdeckerisch und gemeinschaftlich entwickelt. Nie von der Stange.</p>
+        </div>
+        <div class="approach-col">
+          <div class="approach-col-header">
+            <span class="approach-num">03</span>
+            <h3 class="approach-title">Implement</h3>
+          </div>
+          <p class="approach-body">Die Phase der Wirkung. Outcome vor Output. Von der Idee zur messbaren Umsetzung — auf jeder Ebene der Organisation. sieber& bleibt bis es wirklich funktioniert.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── About ── -->
+  <hr class="divider">
+  <section id="about">
+    <p class="section-label">About us</p>
+    <h2 class="section-title">Strategy that puts people at the center.</h2>
+    <p class="section-body">We are an independent consulting firm that believes the best strategies are built on deep human understanding. We partner with organisations to navigate complexity, align teams, and create lasting impact.</p>
+  </section>
+
+  <!-- ── Team ── -->
+  <hr class="divider">
+  <section id="team">
+    <p class="section-label">Team</p>
+    <h2 class="section-title">The people behind the work.</h2>
+    <div class="team-grid">
+      <div class="team-card">
+        <div class="team-card-img"></div>
+        <p class="team-card-name">Anna Sieber</p>
+        <p class="team-card-role">Founder & Managing Partner</p>
+      </div>
+      <div class="team-card">
+        <div class="team-card-img"></div>
+        <p class="team-card-name">Marcus Kohl</p>
+        <p class="team-card-role">Strategy Partner</p>
+      </div>
+      <div class="team-card">
+        <div class="team-card-img"></div>
+        <p class="team-card-name">Lena Hartmann</p>
+        <p class="team-card-role">People & Organisation</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Contact ── -->
+  <hr class="divider">
+  <section id="contact">
+    <p class="section-label">Contact</p>
+    <h2 class="section-title">Let's talk.</h2>
+    <p class="section-body">We'd love to hear about your challenge. Reach out and we'll find a time to connect.</p>
+    <a class="contact-link" href="mailto:hello@sieberund.com">hello@sieberund.com</a>
+  </section>
+
+  <footer>
+    <span>Sieber &amp; — © 2026</span>
+    <span>Zürich, Switzerland</span>
+  </footer>
+
+  <script>
+    /* ─────────────────────────────────────────────
+       CONFIG
+    ───────────────────────────────────────────── */
+    const GRID     = 38;   // px — must match CSS --grid
+    const MAX_DIST = 3;    // grid-cell radius
+    const MIN_LIFE = 800;  // ms
+    const MAX_LIFE = 1800; // ms
+    const GROW_MS  = 120;  // pop-in duration
+
+    // Spawn probability by distance — center always, edges less likely
+    function spawnChance(dist) {
+      if (dist < 0.1) return 1.0;
+      if (dist < 1.2) return 0.85;
+      if (dist < 2.0) return 0.60;
+      if (dist < 2.7) return 0.35;
+      return 0.18;
+    }
+
+    // Diamond half-size by distance — big in center, tiny at edges
+    function cellSize(dist) {
+      if (dist < 0.1) return 20;
+      if (dist < 1.2) return 13;
+      if (dist < 1.6) return 9;
+      if (dist < 2.2) return 6.5;
+      if (dist < 2.8) return 4.5;
+      return 3;
+    }
+
+    /* ── Canvas ── */
+    const canvas = document.getElementById('trail-canvas');
+    const ctx    = canvas.getContext('2d');
+
+    function resize() {
+      canvas.width  = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    resize();
+    window.addEventListener('resize', resize);
+
+    /* ── State — one entry per grid cell, keyed "gx,gy" ── */
+    // Prevents stacking: each cell holds exactly one active diamond
+    // { px, py, size, spawnedAt, life }
+    const cells = new Map();
+
+    /* ── Mouse → spawn ── */
+    const cursorEl = document.getElementById('cursor');
+
+    document.addEventListener('mousemove', (e) => {
+      const mx = e.clientX, my = e.clientY;
+      cursorEl.style.left = mx + 'px';
+      cursorEl.style.top  = my + 'px';
+
+      const now  = Date.now();
+      const gxC  = Math.round(mx / GRID);
+      const gyC  = Math.round(my / GRID);
+
+      for (let dx = -MAX_DIST; dx <= MAX_DIST; dx++) {
+        for (let dy = -MAX_DIST; dy <= MAX_DIST; dy++) {
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist > MAX_DIST) continue;
+
+          // Roll random — different cells light up each pass
+          if (Math.random() > spawnChance(dist)) continue;
+
+          const gx  = gxC + dx;
+          const gy  = gyC + dy;
+          const key = gx + ',' + gy;
+
+          // Only spawn if cell is empty or its previous diamond has fully faded
+          const existing = cells.get(key);
+          if (existing && (now - existing.spawnedAt) < existing.life * 0.6) continue;
+
+          cells.set(key, {
+            px:        gx * GRID,           // exact grid intersection — no jitter
+            py:        gy * GRID,
+            size:      cellSize(dist),
+            spawnedAt: now,
+            life:      MIN_LIFE + Math.random() * (MAX_LIFE - MIN_LIFE)
+          });
+        }
+      }
+    });
+
+    /* ── Draw diamond (pure 45° rotated square, no tilt) ── */
+    function drawDiamond(x, y, half) {
+      ctx.beginPath();
+      ctx.moveTo(x,        y - half);
+      ctx.lineTo(x + half, y       );
+      ctx.lineTo(x,        y + half);
+      ctx.lineTo(x - half, y       );
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    /* ── Render loop ── */
+    function animate() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#ffffff';
+
+      const now = Date.now();
+
+      for (const [key, d] of cells) {
+        const age = now - d.spawnedAt;
+        if (age >= d.life) { cells.delete(key); continue; }
+
+        // Pop-in: ease-out cubic over GROW_MS
+        const growT    = Math.min(age / GROW_MS, 1);
+        const growEase = 1 - Math.pow(1 - growT, 3);
+
+        // Fade-out: linear after grow-in
+        const fadeT    = Math.max(0, (age - GROW_MS) / (d.life - GROW_MS));
+        const fadeEase = 1 - Math.pow(fadeT, 1.2);
+
+        const opacity = growEase * fadeEase;
+        if (opacity < 0.01) continue;
+
+        ctx.globalAlpha = opacity;
+        drawDiamond(d.px, d.py, d.size * growEase);
+      }
+
+      ctx.globalAlpha = 1;
+      requestAnimationFrame(animate);
+    }
+
+    animate();
+  </script>
+</body>
+</html>
